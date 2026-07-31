@@ -170,7 +170,13 @@ def create_app(config: Config) -> FastAPI:
         LOG.clear()
         state.last_head = head_sha(state.config.target_repo)
         LOG.emit("reset", head=state.last_head)
-        return JSONResponse({"ok": True})
+
+        # Clearing the log also clears the "suite is green" the watcher emitted
+        # at startup, which would leave the dashboard with nothing to report.
+        # Re-establish it so a freshly reset repo still shows its test count.
+        report = await asyncio.to_thread(HealLoop(config=state.config).check)
+        LOG.emit("suite_green" if report.green else "suite_red", total=report.total)
+        return JSONResponse({"ok": True, "total": report.total, "green": report.green})
 
     @app.post("/api/heal")
     async def manual_heal() -> JSONResponse:

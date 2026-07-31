@@ -11,6 +11,7 @@ The `FixEngine` protocol exists so the loop never depends on Codex specifically;
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -65,7 +66,7 @@ class CodexCLIEngine:
 
         summary = ""
         if summary_path.exists():
-            summary = summary_path.read_text(encoding="utf-8").strip()
+            summary = tidy_summary(summary_path.read_text(encoding="utf-8"), worktree.path)
             summary_path.unlink(missing_ok=True)
 
         return FixResult(
@@ -129,6 +130,23 @@ class NullEngine:
             summary="",
             effort="none",
         )
+
+
+_MD_LINK = re.compile(r"\[([^\]]+)\]\([^)]*\)")
+
+
+def tidy_summary(raw: str, worktree_path: Path) -> str:
+    """Make the engine's explanation fit for a pull request.
+
+    Codex writes for a terminal: it cites files as markdown links pointing at
+    absolute paths inside the sandbox. That sandbox is deleted moments later,
+    so the links are dead by the time anyone reads them, and they leak a
+    throwaway directory into the permanent record. Keep the file name, drop
+    the path.
+    """
+    text = _MD_LINK.sub(r"\1", raw)
+    text = text.replace(str(worktree_path) + "/", "").replace(str(worktree_path), "")
+    return text.strip()
 
 
 def _tail(text: str, max_chars: int = 6000) -> str:
