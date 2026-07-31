@@ -1,5 +1,5 @@
 """The fix stage — where Codex does the engineering."""
 
-from mender.fix.engine import CodexCLIEngine, FixEngine
+from mender.fix.engine import CodexCLIEngine, FixEngine, codex_available
 
-__all__ = ["CodexCLIEngine", "FixEngine"]
+__all__ = ["CodexCLIEngine", "FixEngine", "codex_available"]

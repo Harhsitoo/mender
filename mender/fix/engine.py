@@ -138,6 +138,15 @@ class NullEngine:
         )
 
 
+def codex_available(config: Config) -> bool:
+    """Is the Codex CLI installed and authenticated?
+
+    Checked once at startup so a hosted instance can fall back to replaying a
+    recorded session instead of failing every heal with a wall of auth errors.
+    """
+    return run([config.codex_bin, "login", "status"], timeout=30).ok
+
+
 _MD_LINK = re.compile(r"\[([^\]]+)\]\([^)]*\)")
 
 

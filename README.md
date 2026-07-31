@@ -82,10 +82,45 @@ the least reliable part of a live demo:
 | `mender watch` | poll and heal whenever HEAD moves to red |
 | `mender serve` | the live dashboard |
 | `mender break --scenario 03` | seed a bug |
+| `mender record --scenario 03` | run a real heal and save it as a replayable transcript |
 | `mender reset` | rebuild the sandbox, pristine and green |
 | `mender scenarios` | list the seeded bugs |
 
 Point it at your own repo with `--repo /path/to/project` (or `MENDER_TARGET_REPO`).
+
+## Deploying
+
+`Dockerfile` builds an image with git, Node, and the Codex CLI. Any host that
+builds from a repo will do; `render.yaml` is included as a blueprint.
+
+The one thing the container needs is `OPENAI_API_KEY`, set as a **secret in the
+host's dashboard** — never in the repo. The entrypoint pipes it straight into
+`codex login --with-api-key`, so the key is never written to disk by Mender and
+never baked into an image layer. A ChatGPT subscription will not work here: that
+token is device-bound, and API access is billed separately.
+
+Two things change automatically in a container:
+
+- **Codex's own sandbox is bypassed** (`MENDER_CODEX_BYPASS_SANDBOX=1`). The
+  container is already the isolation boundary, and Codex's seccomp layer fails
+  on hosts that restrict syscalls themselves.
+- **Public mode** (`MENDER_PUBLIC=1`) adds a cooldown between heals and an
+  hourly ceiling, because every click on a public URL spends real tokens.
+
+### Replay mode
+
+If Codex is not authenticated — no key, or credit exhausted — Mender does not
+fail every click. It replays a recorded session instead: the real event log of
+a real heal, played back at its original speed.
+
+```bash
+mender record --scenario 02   # writes replays/scenario-02.json
+```
+
+A transcript can only exist because the real loop produced it, and the UI says
+plainly that it is replaying. Recording a session that did not heal is refused.
+It also makes a good insurance policy for a live demo, where the thing most
+likely to fail is the wifi.
 
 ## Measured behaviour
 
@@ -93,10 +128,13 @@ Against the bundled demo repo (41 tests), fixed by Codex on `gpt-5.5`:
 
 | Seeded bug | Failing tests | Attempts | Time |
 |------------|---------------|----------|------|
-| Empty-cart `ZeroDivisionError` | 1 | 1 | 18.0s |
-| Pagination off-by-one | 3 | 1 | 20.7s |
-| `None` surname renders `"Prince None"` | 1 | 1 | 36.2s |
-| Naive datetime leaks into aware comparison | 2 | 1 | 17.3s |
+| Empty-cart `ZeroDivisionError` | 1 | 1 | 19.4s |
+| Pagination off-by-one | 3 | 1 | 18.0s |
+| `None` surname renders `"Prince None"` | 1 | 1 | 18.0s |
+| Naive datetime leaks into aware comparison | 2 | 1 | 18.0s |
+
+Those are not remembered numbers — each row is a recorded session in
+`replays/`, and you can watch any of them back with `mender serve`.
 
 Mender's own suite is 49 tests, and the ones that matter most are in
 `tests/test_loop.py`: they script an engine that cheats — deleting the failing

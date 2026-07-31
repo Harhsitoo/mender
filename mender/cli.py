@@ -208,6 +208,48 @@ def cmd_reset(config: Config, _args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_record(config: Config, args: argparse.Namespace) -> int:
+    """Run a real heal and save it as a replayable transcript."""
+    from mender.events import LOG
+    from mender.replay import Transcript, transcript_path
+
+    scenario = SCENARIOS.get(args.scenario)
+    if scenario is None:
+        print(red(f"unknown scenario {args.scenario!r}"))
+        return cmd_scenarios(config, args)
+
+    if not _is_demo_sandbox(config):
+        print(red("✗ recording only works against the bundled demo sandbox"))
+        return 2
+
+    reset(config.demo_template, config.target_repo)
+    print(dim(f"sandbox rebuilt — seeding {scenario.title}"))
+
+    LOG.clear()
+    try:
+        sha = apply_scenario(scenario, config.target_repo)
+    except ScenarioError as exc:
+        print(red(f"✗ {exc}"))
+        return 1
+
+    LOG.emit("bug_seeded", scenario=scenario.key, title=scenario.title,
+             file=scenario.file, sha=sha)
+
+    incident = HealLoop(config=config).heal()
+    _print_incident(incident)
+
+    if not incident.healed:
+        print(red("\n✗ not recording a session that did not heal"))
+        return 1
+
+    path = Transcript.from_events(args.scenario, LOG.since(0)).save(
+        transcript_path(args.scenario)
+    )
+    print(green(f"\n✓ recorded → {path.relative_to(config.demo_template.parent)}"))
+    print(dim("  Replayed verbatim when Codex is unavailable."))
+    return 0
+
+
 def cmd_scenarios(config: Config, _args: argparse.Namespace) -> int:
     print(bold("Seeded bugs\n"))
     for scenario in SCENARIOS.values():
@@ -261,6 +303,9 @@ def build_parser() -> argparse.ArgumentParser:
     broke = add("break", "seed a bug into the demo repo")
     broke.add_argument("--scenario", default="01", help="scenario key (see `mender scenarios`)")
 
+    record = add("record", "run a real heal and save it as a replayable transcript")
+    record.add_argument("--scenario", default="01", help="scenario key to record")
+
     add("reset", "restore the demo sandbox to its pristine state")
     add("scenarios", "list the seeded bugs")
 
@@ -273,6 +318,7 @@ _COMMANDS = {
     "watch": cmd_watch,
     "serve": cmd_serve,
     "break": cmd_break,
+    "record": cmd_record,
     "reset": cmd_reset,
     "scenarios": cmd_scenarios,
 }

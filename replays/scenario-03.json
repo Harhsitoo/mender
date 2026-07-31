@@ -1,0 +1,169 @@
+{
+  "scenario": "03",
+  "recorded_at": "2026-07-31T19:35:28+00:00",
+  "duration": 17.989,
+  "steps": [
+    {
+      "offset": 0.0,
+      "kind": "bug_seeded",
+      "data": {
+        "scenario": "03",
+        "title": "Inline the full name formatter",
+        "file": "shopkit/users.py",
+        "sha": "d0f6e61"
+      }
+    },
+    {
+      "offset": 0.232,
+      "kind": "incident_detected",
+      "data": {
+        "incident": "e9bf0cb1",
+        "total": 41,
+        "failed": 1,
+        "head": "d0f6e61",
+        "subject": "Inline the full name formatter",
+        "failures": [
+          {
+            "nodeid": "tests/test_users.py::test_full_name_without_last_name",
+            "headline": "AssertionError: assert 'Prince None' == 'Prince'",
+            "file": "tests/test_users.py",
+            "line": 10
+          }
+        ]
+      }
+    },
+    {
+      "offset": 0.232,
+      "kind": "phase",
+      "data": {
+        "incident": "e9bf0cb1",
+        "phase": "collecting",
+        "attempt": null
+      }
+    },
+    {
+      "offset": 0.282,
+      "kind": "brief_ready",
+      "data": {
+        "incident": "e9bf0cb1",
+        "base_ref": "d0f6e61b",
+        "files": [
+          "shopkit/users.py",
+          "tests/test_users.py"
+        ],
+        "caused_by": "Inline the full name formatter"
+      }
+    },
+    {
+      "offset": 0.282,
+      "kind": "phase",
+      "data": {
+        "incident": "e9bf0cb1",
+        "phase": "fixing",
+        "attempt": 1
+      }
+    },
+    {
+      "offset": 0.339,
+      "kind": "attempt_started",
+      "data": {
+        "incident": "e9bf0cb1",
+        "attempt": 1,
+        "of": 3,
+        "engine": "codex-cli"
+      }
+    },
+    {
+      "offset": 17.575,
+      "kind": "attempt_finished",
+      "data": {
+        "incident": "e9bf0cb1",
+        "attempt": 1,
+        "effort": "low",
+        "duration": 17.1,
+        "changed_files": [
+          "shopkit/users.py"
+        ],
+        "summary": "Fixed shopkit/users.py.\n\nRoot cause: the formatter interpolated an absent surname, rendering Python\u2019s `None` as text. Restored the `None` guard so single-name users return only their first name.\n\nVerified: `41 passed`.",
+        "diff": "diff --git a/shopkit/users.py b/shopkit/users.py\nindex 7123b0a..ef64871 100644\n--- a/shopkit/users.py\n+++ b/shopkit/users.py\n@@ -29,6 +29,8 @@ def full_name(user: User) -> str:\n     Users without a last name render as just their first name \u2014 with no\n     trailing space, which is the whole reason this is not an f-string.\n     \"\"\"\n+    if user.last_name is None:\n+        return user.first_name\n     return f\"{user.first_name} {user.last_name}\"\n \n \n"
+      }
+    },
+    {
+      "offset": 17.575,
+      "kind": "phase",
+      "data": {
+        "incident": "e9bf0cb1",
+        "phase": "verifying",
+        "attempt": 1
+      }
+    },
+    {
+      "offset": 17.575,
+      "kind": "gate",
+      "data": {
+        "incident": "e9bf0cb1",
+        "attempt": 1,
+        "name": "Integrity",
+        "passed": true,
+        "detail": "Patch touches 1 source file(s) and leaves the test suite untouched: shopkit/users.py"
+      }
+    },
+    {
+      "offset": 17.731,
+      "kind": "gate",
+      "data": {
+        "incident": "e9bf0cb1",
+        "attempt": 1,
+        "name": "Target",
+        "passed": true,
+        "detail": "`tests/test_users.py::test_full_name_without_last_name` passes."
+      }
+    },
+    {
+      "offset": 17.902,
+      "kind": "gate",
+      "data": {
+        "incident": "e9bf0cb1",
+        "attempt": 1,
+        "name": "Regression",
+        "passed": true,
+        "detail": "All 41 tests pass in 0.17s."
+      }
+    },
+    {
+      "offset": 17.902,
+      "kind": "phase",
+      "data": {
+        "incident": "e9bf0cb1",
+        "phase": "delivering",
+        "attempt": 1
+      }
+    },
+    {
+      "offset": 17.963,
+      "kind": "branch_created",
+      "data": {
+        "incident": "e9bf0cb1",
+        "branch": "mender/fix-e9bf0cb1",
+        "sha": "03863c91"
+      }
+    },
+    {
+      "offset": 17.989,
+      "kind": "healed",
+      "data": {
+        "incident": "e9bf0cb1",
+        "attempts": 1,
+        "elapsed": 18.0,
+        "branch": "mender/fix-e9bf0cb1",
+        "pr_url": "",
+        "root_cause": "Fixed shopkit/users.py.\n\nRoot cause: the formatter interpolated an absent surname, rendering Python\u2019s `None` as text. Restored the `None` guard so single-name users return only their first name.\n\nVerified: `41 passed`.",
+        "changed_files": [
+          "shopkit/users.py"
+        ],
+        "diff": "diff --git a/shopkit/users.py b/shopkit/users.py\nindex 7123b0a..ef64871 100644\n--- a/shopkit/users.py\n+++ b/shopkit/users.py\n@@ -29,6 +29,8 @@ def full_name(user: User) -> str:\n     Users without a last name render as just their first name \u2014 with no\n     trailing space, which is the whole reason this is not an f-string.\n     \"\"\"\n+    if user.last_name is None:\n+        return user.first_name\n     return f\"{user.first_name} {user.last_name}\"\n \n \n",
+        "test": "tests/test_users.py::test_full_name_without_last_name"
+      }
+    }
+  ]
+}

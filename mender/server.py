@@ -22,8 +22,10 @@ from mender import __version__
 from mender.config import Config
 from mender.demo import SCENARIOS, ScenarioError, apply_scenario, ensure_sandbox, reset
 from mender.events import LOG
+from mender.fix.engine import codex_available
 from mender.gitutil import head_sha, head_subject
 from mender.loop import HealLoop
+from mender.replay import Transcript, available as available_replays, play
 
 DASHBOARD = Path(__file__).resolve().parent.parent / "dashboard" / "index.html"
 
@@ -41,8 +43,10 @@ class AppState:
     busy: bool = False
     last_head: str = ""
     watching: bool = True
+    live: bool = True
     finished_at: float = 0.0
     recent: list[float] = field(default_factory=list)
+    last_scenario: str = ""
     lock: threading.Lock = field(default_factory=threading.Lock)
 
     def claim(self) -> str | None:
@@ -75,7 +79,29 @@ class AppState:
 def create_app(config: Config) -> FastAPI:
     ensure_sandbox(config.demo_template, config.target_repo)
     state = AppState(config=config)
+    replays = available_replays()
+
+    # Decided once, at startup: a missing or unfunded key should degrade to
+    # replaying a real recorded session, not fail every click with auth errors.
+    state.live = codex_available(config)
+    if not state.live:
+        print(
+            "mender: Codex is unavailable — serving recorded sessions"
+            if replays
+            else "mender: Codex is unavailable and no recordings exist; heals will fail"
+        )
+
     app = FastAPI(title="Mender", docs_url=None, redoc_url=None)
+
+    def replay_now(scenario: str) -> bool:
+        """Play back a recorded heal. Returns False if there is nothing to play."""
+        path = replays.get(scenario) or (
+            replays[sorted(replays)[0]] if replays else None
+        )
+        if path is None:
+            return False
+        play(Transcript.load(path), LOG, should_stop=lambda: not state.watching)
+        return True
 
     def heal_now() -> None:
         """Run one heal cycle on a worker thread."""
@@ -84,6 +110,14 @@ def create_app(config: Config) -> FastAPI:
             LOG.emit("throttled", reason=refusal)
             return
         try:
+            if not state.live:
+                if not replay_now(state.last_scenario):
+                    LOG.emit(
+                        "error",
+                        message="Codex is not authenticated and no recorded session is available.",
+                    )
+                return
+
             loop = HealLoop(config=state.config)
             report = loop.check()
             if report.green:
@@ -103,7 +137,10 @@ def create_app(config: Config) -> FastAPI:
         """
         while True:
             try:
-                if state.watching and not state.busy:
+                # In replay mode nothing real ever breaks, so a HEAD change is
+                # only ever a reset. Auto-firing a replay off that would look
+                # like the agent reacting to something it did not see.
+                if state.live and state.watching and not state.busy:
                     head = head_sha(state.config.target_repo)
                     if head and head != state.last_head:
                         state.last_head = head
@@ -156,6 +193,8 @@ def create_app(config: Config) -> FastAPI:
                 "subject": head_subject(state.config.target_repo),
                 "busy": state.busy,
                 "watching": state.watching,
+                "live": state.live,
+                "replays": sorted(replays),
                 "max_attempts": state.config.max_attempts,
                 "seq": LOG.latest_seq(),
                 "scenarios": [
@@ -178,6 +217,14 @@ def create_app(config: Config) -> FastAPI:
             return JSONResponse({"error": f"unknown scenario {key}"}, status_code=404)
         if state.busy:
             return JSONResponse({"error": "a heal is already running"}, status_code=409)
+
+        state.last_scenario = key
+
+        if not state.live:
+            # Nothing is actually broken in replay mode; the recording already
+            # contains the commit that broke things.
+            threading.Thread(target=heal_now, daemon=True).start()
+            return JSONResponse({"ok": True, "replay": True})
 
         try:
             sha = await asyncio.to_thread(apply_scenario, scenario, state.config.target_repo)

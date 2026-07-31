@@ -1,0 +1,181 @@
+{
+  "scenario": "02",
+  "recorded_at": "2026-07-31T19:35:10+00:00",
+  "duration": 17.972,
+  "steps": [
+    {
+      "offset": 0.0,
+      "kind": "bug_seeded",
+      "data": {
+        "scenario": "02",
+        "title": "Tidy up pagination offset",
+        "file": "shopkit/pagination.py",
+        "sha": "db33afe"
+      }
+    },
+    {
+      "offset": 0.215,
+      "kind": "incident_detected",
+      "data": {
+        "incident": "06f455b5",
+        "total": 41,
+        "failed": 3,
+        "head": "db33afe",
+        "subject": "Tidy up pagination offset",
+        "failures": [
+          {
+            "nodeid": "tests/test_pagination.py::test_first_page_starts_at_the_beginning",
+            "headline": "AssertionError: assert ('d', 'e', 'f') == ('a', 'b', 'c')",
+            "file": "tests/test_pagination.py",
+            "line": 8
+          },
+          {
+            "nodeid": "tests/test_pagination.py::test_second_page",
+            "headline": "AssertionError: assert ('g', 'h', 'i') == ('d', 'e', 'f')",
+            "file": "tests/test_pagination.py",
+            "line": 13
+          },
+          {
+            "nodeid": "tests/test_pagination.py::test_last_page_may_be_short",
+            "headline": "AssertionError: assert () == ('j',)",
+            "file": "tests/test_pagination.py",
+            "line": 17
+          }
+        ]
+      }
+    },
+    {
+      "offset": 0.215,
+      "kind": "phase",
+      "data": {
+        "incident": "06f455b5",
+        "phase": "collecting",
+        "attempt": null
+      }
+    },
+    {
+      "offset": 0.264,
+      "kind": "brief_ready",
+      "data": {
+        "incident": "06f455b5",
+        "base_ref": "db33afe5",
+        "files": [
+          "shopkit/pagination.py",
+          "tests/test_pagination.py"
+        ],
+        "caused_by": "Tidy up pagination offset"
+      }
+    },
+    {
+      "offset": 0.264,
+      "kind": "phase",
+      "data": {
+        "incident": "06f455b5",
+        "phase": "fixing",
+        "attempt": 1
+      }
+    },
+    {
+      "offset": 0.32,
+      "kind": "attempt_started",
+      "data": {
+        "incident": "06f455b5",
+        "attempt": 1,
+        "of": 3,
+        "engine": "codex-cli"
+      }
+    },
+    {
+      "offset": 17.56,
+      "kind": "attempt_finished",
+      "data": {
+        "incident": "06f455b5",
+        "attempt": 1,
+        "effort": "low",
+        "duration": 17.2,
+        "changed_files": [
+          "shopkit/pagination.py"
+        ],
+        "summary": "Fixed shopkit/pagination.py.\n\n`paginate` treats page numbers as 1-indexed, but calculated the slice offset as if they were 0-indexed, skipping the first page. Restoring `(number - 1) * per_page` makes page 1 start at index 0.\n\nVerified: `41 passed` via the requested pytest command.",
+        "diff": "diff --git a/shopkit/pagination.py b/shopkit/pagination.py\nindex 497e642..5810125 100644\n--- a/shopkit/pagination.py\n+++ b/shopkit/pagination.py\n@@ -55,7 +55,7 @@ def paginate(items: Sequence[T], number: int = 1, per_page: int = 10) -> Page:\n     if per_page < 1:\n         raise ValueError(f\"per_page must be at least 1, got {per_page}\")\n \n-    start = number * per_page\n+    start = (number - 1) * per_page\n     return Page(\n         items=tuple(items[start : start + per_page]),\n         number=number,\n"
+      }
+    },
+    {
+      "offset": 17.56,
+      "kind": "phase",
+      "data": {
+        "incident": "06f455b5",
+        "phase": "verifying",
+        "attempt": 1
+      }
+    },
+    {
+      "offset": 17.56,
+      "kind": "gate",
+      "data": {
+        "incident": "06f455b5",
+        "attempt": 1,
+        "name": "Integrity",
+        "passed": true,
+        "detail": "Patch touches 1 source file(s) and leaves the test suite untouched: shopkit/pagination.py"
+      }
+    },
+    {
+      "offset": 17.716,
+      "kind": "gate",
+      "data": {
+        "incident": "06f455b5",
+        "attempt": 1,
+        "name": "Target",
+        "passed": true,
+        "detail": "`tests/test_pagination.py::test_first_page_starts_at_the_beginning` passes."
+      }
+    },
+    {
+      "offset": 17.885,
+      "kind": "gate",
+      "data": {
+        "incident": "06f455b5",
+        "attempt": 1,
+        "name": "Regression",
+        "passed": true,
+        "detail": "All 41 tests pass in 0.17s."
+      }
+    },
+    {
+      "offset": 17.885,
+      "kind": "phase",
+      "data": {
+        "incident": "06f455b5",
+        "phase": "delivering",
+        "attempt": 1
+      }
+    },
+    {
+      "offset": 17.946,
+      "kind": "branch_created",
+      "data": {
+        "incident": "06f455b5",
+        "branch": "mender/fix-06f455b5",
+        "sha": "2c0b25d1"
+      }
+    },
+    {
+      "offset": 17.972,
+      "kind": "healed",
+      "data": {
+        "incident": "06f455b5",
+        "attempts": 1,
+        "elapsed": 18.0,
+        "branch": "mender/fix-06f455b5",
+        "pr_url": "",
+        "root_cause": "Fixed shopkit/pagination.py.\n\n`paginate` treats page numbers as 1-indexed, but calculated the slice offset as if they were 0-indexed, skipping the first page. Restoring `(number - 1) * per_page` makes page 1 start at index 0.\n\nVerified: `41 passed` via the requested pytest command.",
+        "changed_files": [
+          "shopkit/pagination.py"
+        ],
+        "diff": "diff --git a/shopkit/pagination.py b/shopkit/pagination.py\nindex 497e642..5810125 100644\n--- a/shopkit/pagination.py\n+++ b/shopkit/pagination.py\n@@ -55,7 +55,7 @@ def paginate(items: Sequence[T], number: int = 1, per_page: int = 10) -> Page:\n     if per_page < 1:\n         raise ValueError(f\"per_page must be at least 1, got {per_page}\")\n \n-    start = number * per_page\n+    start = (number - 1) * per_page\n     return Page(\n         items=tuple(items[start : start + per_page]),\n         number=number,\n",
+        "test": "tests/test_pagination.py::test_first_page_starts_at_the_beginning"
+      }
+    }
+  ]
+}

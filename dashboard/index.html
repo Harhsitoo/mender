@@ -284,6 +284,16 @@
     max-width: 1240px; margin: 0 auto; padding: 22px 26px 40px;
     color: var(--text-3); font-size: 12.5px; border-top: 1px solid var(--border);
   }
+
+  .mode {
+    display: none; align-items: flex-start; gap: 11px;
+    max-width: 1240px; margin: 22px auto -8px; padding: 12px 16px;
+    border: 1px solid #3d3319; border-radius: var(--r);
+    background: rgba(251,191,36,.07); color: var(--text-2); font-size: 13px;
+  }
+  .mode.show { display: flex; }
+  .mode b { color: var(--amber); font-weight: 620; }
+  @media (max-width: 1240px) { .mode { margin: 22px 26px -8px; } }
 </style>
 </head>
 <body>
@@ -300,6 +310,8 @@
   <div class="repo-chip"><span>watching</span> <b id="repo">…</b> <span>@</span> <b id="head">…</b></div>
   <div class="live"><span class="dot" id="dot"></span><span id="livetext">connecting</span></div>
 </header>
+
+<div class="mode" id="mode"></div>
 
 <div class="wrap">
   <div class="pipeline" id="pipeline"></div>
@@ -602,6 +614,20 @@ const HANDLERS = {
     setReadout(e.total || "—", "suite is red", "bad");
   },
 
+  replay_started(e) {
+    const hero = $("hero"); if (hero) hero.remove();
+    startTimer(); setBusy(true);
+    card("", "Replaying a recorded session", `
+      <div style="margin-bottom:8px">Everything below actually happened — this is
+      the event log of a real heal recorded on
+      <b>${esc((e.recorded_at || "").slice(0, 10))}</b>, played back at its
+      original speed.</div>
+      <div class="gwhat">Codex is not authenticated on this instance, so nothing
+      is being fixed live right now.</div>`);
+  },
+
+  replay_stopped() { stopTimer(); setBusy(false); },
+
   throttled(e) {
     setBusy(false);
     card("", "Held back", `
@@ -633,6 +659,17 @@ async function refreshStatus() {
   const s = await (await fetch("/api/status")).json();
   $("repo").textContent = s.repo.split("/").pop();
   $("head").textContent = s.head;
+
+  // A replay must never be mistaken for a live run, so say so up front and
+  // leave it on screen for the whole session.
+  if (s.live === false) {
+    $("mode").className = "mode show";
+    $("mode").innerHTML = `<div><b>Replay mode.</b> Codex is not authenticated on
+      this instance, so picking a bug replays a real recorded heal — the same
+      events, at the same speed, from a run that genuinely happened. Nothing is
+      being fixed live. To watch it work for real, clone the repo and run
+      <code>mender serve</code> with your own Codex login.</div>`;
+  }
 
   const box = $("scenarios");
   if (!box.dataset.filled) {

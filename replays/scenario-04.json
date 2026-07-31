@@ -1,0 +1,175 @@
+{
+  "scenario": "04",
+  "recorded_at": "2026-07-31T19:35:46+00:00",
+  "duration": 17.982,
+  "steps": [
+    {
+      "offset": 0.0,
+      "kind": "bug_seeded",
+      "data": {
+        "scenario": "04",
+        "title": "Use local time for invoice comparisons",
+        "file": "shopkit/billing.py",
+        "sha": "36ad2f0"
+      }
+    },
+    {
+      "offset": 0.223,
+      "kind": "incident_detected",
+      "data": {
+        "incident": "420d75ec",
+        "total": 41,
+        "failed": 2,
+        "head": "36ad2f0",
+        "subject": "Use local time for invoice comparisons",
+        "failures": [
+          {
+            "nodeid": "tests/test_billing.py::test_days_until_due_defaults_to_an_aware_now",
+            "headline": "ValueError: due_at must be timezone-aware",
+            "file": "tests/test_billing.py",
+            "line": 26
+          },
+          {
+            "nodeid": "tests/test_billing.py::test_now_utc_is_timezone_aware",
+            "headline": "assert None is not None",
+            "file": "tests/test_billing.py",
+            "line": 31
+          }
+        ]
+      }
+    },
+    {
+      "offset": 0.223,
+      "kind": "phase",
+      "data": {
+        "incident": "420d75ec",
+        "phase": "collecting",
+        "attempt": null
+      }
+    },
+    {
+      "offset": 0.271,
+      "kind": "brief_ready",
+      "data": {
+        "incident": "420d75ec",
+        "base_ref": "36ad2f02",
+        "files": [
+          "shopkit/billing.py",
+          "tests/test_billing.py"
+        ],
+        "caused_by": "Use local time for invoice comparisons"
+      }
+    },
+    {
+      "offset": 0.271,
+      "kind": "phase",
+      "data": {
+        "incident": "420d75ec",
+        "phase": "fixing",
+        "attempt": 1
+      }
+    },
+    {
+      "offset": 0.328,
+      "kind": "attempt_started",
+      "data": {
+        "incident": "420d75ec",
+        "attempt": 1,
+        "of": 3,
+        "engine": "codex-cli"
+      }
+    },
+    {
+      "offset": 17.571,
+      "kind": "attempt_finished",
+      "data": {
+        "incident": "420d75ec",
+        "attempt": 1,
+        "effort": "low",
+        "duration": 17.2,
+        "changed_files": [
+          "shopkit/billing.py"
+        ],
+        "summary": "Fixed shopkit/billing.py.\n\nRoot cause: `now_utc()` was changed to `datetime.now()`, which returns a naive local datetime despite the function\u2019s UTC-aware contract. Restoring `datetime.now(timezone.utc)` ensures invoice due dates and default comparisons remain timezone-aware.\n\nVerified: `41 passed`.",
+        "diff": "diff --git a/shopkit/billing.py b/shopkit/billing.py\nindex 6ee01dd..fa1e5f4 100644\n--- a/shopkit/billing.py\n+++ b/shopkit/billing.py\n@@ -26,7 +26,7 @@ class Invoice:\n \n def now_utc() -> datetime:\n     \"\"\"Current time, always timezone-aware.\"\"\"\n-    return datetime.now()\n+    return datetime.now(timezone.utc)\n \n \n def days_until_due(invoice: Invoice, now: datetime | None = None) -> int:\n"
+      }
+    },
+    {
+      "offset": 17.571,
+      "kind": "phase",
+      "data": {
+        "incident": "420d75ec",
+        "phase": "verifying",
+        "attempt": 1
+      }
+    },
+    {
+      "offset": 17.571,
+      "kind": "gate",
+      "data": {
+        "incident": "420d75ec",
+        "attempt": 1,
+        "name": "Integrity",
+        "passed": true,
+        "detail": "Patch touches 1 source file(s) and leaves the test suite untouched: shopkit/billing.py"
+      }
+    },
+    {
+      "offset": 17.729,
+      "kind": "gate",
+      "data": {
+        "incident": "420d75ec",
+        "attempt": 1,
+        "name": "Target",
+        "passed": true,
+        "detail": "`tests/test_billing.py::test_days_until_due_defaults_to_an_aware_now` passes."
+      }
+    },
+    {
+      "offset": 17.896,
+      "kind": "gate",
+      "data": {
+        "incident": "420d75ec",
+        "attempt": 1,
+        "name": "Regression",
+        "passed": true,
+        "detail": "All 41 tests pass in 0.17s."
+      }
+    },
+    {
+      "offset": 17.896,
+      "kind": "phase",
+      "data": {
+        "incident": "420d75ec",
+        "phase": "delivering",
+        "attempt": 1
+      }
+    },
+    {
+      "offset": 17.956,
+      "kind": "branch_created",
+      "data": {
+        "incident": "420d75ec",
+        "branch": "mender/fix-420d75ec",
+        "sha": "e8f13b0b"
+      }
+    },
+    {
+      "offset": 17.982,
+      "kind": "healed",
+      "data": {
+        "incident": "420d75ec",
+        "attempts": 1,
+        "elapsed": 18.0,
+        "branch": "mender/fix-420d75ec",
+        "pr_url": "",
+        "root_cause": "Fixed shopkit/billing.py.\n\nRoot cause: `now_utc()` was changed to `datetime.now()`, which returns a naive local datetime despite the function\u2019s UTC-aware contract. Restoring `datetime.now(timezone.utc)` ensures invoice due dates and default comparisons remain timezone-aware.\n\nVerified: `41 passed`.",
+        "changed_files": [
+          "shopkit/billing.py"
+        ],
+        "diff": "diff --git a/shopkit/billing.py b/shopkit/billing.py\nindex 6ee01dd..fa1e5f4 100644\n--- a/shopkit/billing.py\n+++ b/shopkit/billing.py\n@@ -26,7 +26,7 @@ class Invoice:\n \n def now_utc() -> datetime:\n     \"\"\"Current time, always timezone-aware.\"\"\"\n-    return datetime.now()\n+    return datetime.now(timezone.utc)\n \n \n def days_until_due(invoice: Invoice, now: datetime | None = None) -> int:\n",
+        "test": "tests/test_billing.py::test_days_until_due_defaults_to_an_aware_now"
+      }
+    }
+  ]
+}
