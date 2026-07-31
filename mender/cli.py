@@ -156,14 +156,24 @@ def cmd_watch(config: Config, _args: argparse.Namespace) -> int:
 
 
 def cmd_serve(config: Config, args: argparse.Namespace) -> int:
+    import os
+
     import uvicorn
 
     from mender.server import create_app
 
+    # PaaS hosts assign a port and expect the process to bind every interface.
+    # Their environment wins over the CLI defaults so the same command works
+    # locally and in a container with no flags.
+    host = os.environ.get("HOST") or args.host
+    port = int(os.environ.get("PORT") or args.port)
+
     app = create_app(config)
-    print(bold(f"Mender dashboard → http://{args.host}:{args.port}"))
+    print(bold(f"Mender dashboard → http://{host}:{port}"))
     print(dim(f"watching {config.target_repo}"))
-    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+    if config.public_mode:
+        print(dim(f"public mode — {config.heal_cooldown:.0f}s cooldown, {config.heals_per_hour}/hour"))
+    uvicorn.run(app, host=host, port=port, log_level="warning")
     return 0
 
 

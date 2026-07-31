@@ -602,6 +602,15 @@ const HANDLERS = {
     setReadout(e.total || "—", "suite is red", "bad");
   },
 
+  throttled(e) {
+    setBusy(false);
+    card("", "Held back", `
+      <div style="margin-bottom:8px">${esc(e.reason)}.</div>
+      <div class="gwhat">Each heal is a real model call on a shared demo instance,
+      so this one is rate limited. The repository is untouched — press
+      <b>Force a heal</b> when the cooldown is up.</div>`);
+  },
+
   error(e) {
     stopTimer(); setBusy(false);
     card("red", "Error", `<div class="gdetail">${esc(e.message)}</div>`);

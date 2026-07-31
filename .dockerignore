@@ -1,0 +1,10 @@
+.venv/
+.git/
+.mender-demo/
+.mender-work/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.DS_Store
+.claude/

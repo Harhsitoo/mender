@@ -86,8 +86,6 @@ class CodexCLIEngine:
             "exec",
             "-C",
             str(worktree_path),
-            "-s",
-            self.config.codex_sandbox,
             "--ignore-user-config",
             "--skip-git-repo-check",
             "-c",
@@ -97,6 +95,14 @@ class CodexCLIEngine:
             "-o",
             str(summary_path),
         ]
+
+        if self.config.codex_bypass_sandbox:
+            # Only ever set inside a container, where the container is already
+            # the isolation boundary and Codex's own sandbox layer would be a
+            # second one that many hosts will not permit.
+            cmd.append("--dangerously-bypass-approvals-and-sandbox")
+        else:
+            cmd += ["-s", self.config.codex_sandbox]
         if self.config.codex_model:
             cmd += ["-m", self.config.codex_model]
         cmd.append(instruction)

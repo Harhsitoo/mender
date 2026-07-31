@@ -1,0 +1,22 @@
+# Render blueprint. Connect the GitHub repo, and Render builds the Dockerfile.
+#
+# OPENAI_API_KEY is deliberately `sync: false` — Render prompts for it in the
+# dashboard and stores it as a secret. It must never be committed here.
+services:
+  - type: web
+    name: mender
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    # The free plan sleeps after 15 minutes idle and takes ~50s to wake, which
+    # is a poor bet when a judge is checking whether the link opens.
+    plan: starter
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MENDER_PUBLIC
+        value: "1"
+      - key: MENDER_HEAL_COOLDOWN
+        value: "20"
+      - key: MENDER_HEALS_PER_HOUR
+        value: "40"

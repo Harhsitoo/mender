@@ -89,6 +89,11 @@ class Config:
     codex_sandbox: str = "workspace-write"
     codex_timeout: int = 420
 
+    # Inside a container the container *is* the sandbox, and Codex's own
+    # seccomp/landlock layer tends to fail on hosts that already restrict
+    # syscalls. Opt in there; never on a developer machine.
+    codex_bypass_sandbox: bool = False
+
     # Reasoning effort per attempt. Attempt 1 is cheap and fast because most
     # broken tests are shallow; if that is rejected we buy more thinking rather
     # than asking the same question again the same way.
@@ -109,6 +114,13 @@ class Config:
     # Watch mode.
     watch_interval: float = 2.0
 
+    # Public deployment. Every heal spends real tokens, and a public URL means
+    # strangers can trigger them, so a hosted instance gets a cooldown between
+    # runs and a hard ceiling per hour. Both are off by default locally.
+    public_mode: bool = False
+    heal_cooldown: float = 20.0
+    heals_per_hour: int = 40
+
     @classmethod
     def load(cls) -> Config:
         return cls(
@@ -120,6 +132,7 @@ class Config:
             codex_model=_env_str("MENDER_CODEX_MODEL", ""),
             codex_sandbox=_env_str("MENDER_CODEX_SANDBOX", "workspace-write"),
             codex_timeout=_env_int("MENDER_CODEX_TIMEOUT", 420),
+            codex_bypass_sandbox=_env_bool("MENDER_CODEX_BYPASS_SANDBOX", False),
             effort_ladder=tuple(
                 part.strip()
                 for part in _env_str("MENDER_EFFORT_LADDER", "low,medium,high").split(",")
@@ -132,4 +145,7 @@ class Config:
             open_pr=_env_bool("MENDER_OPEN_PR", False),
             branch_prefix=_env_str("MENDER_BRANCH_PREFIX", "mender/fix"),
             watch_interval=_env_float("MENDER_WATCH_INTERVAL", 2.0),
+            public_mode=_env_bool("MENDER_PUBLIC", False),
+            heal_cooldown=_env_float("MENDER_HEAL_COOLDOWN", 20.0),
+            heals_per_hour=_env_int("MENDER_HEALS_PER_HOUR", 40),
         )

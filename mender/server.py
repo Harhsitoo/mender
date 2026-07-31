@@ -18,6 +18,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
+from mender import __version__
 from mender.config import Config
 from mender.demo import SCENARIOS, ScenarioError, apply_scenario, ensure_sandbox, reset
 from mender.events import LOG
@@ -29,24 +30,46 @@ DASHBOARD = Path(__file__).resolve().parent.parent / "dashboard" / "index.html"
 
 @dataclass
 class AppState:
-    """Guards against two heals running at once."""
+    """Guards the heal loop: one at a time, and not too often.
+
+    On a public URL every click spends real tokens, so `claim` doubles as a
+    rate limiter. The caller gets a reason back rather than a bare False, so
+    the dashboard can say *why* it refused.
+    """
 
     config: Config
     busy: bool = False
     last_head: str = ""
     watching: bool = True
+    finished_at: float = 0.0
+    recent: list[float] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
 
-    def claim(self) -> bool:
+    def claim(self) -> str | None:
+        """Take the heal slot, or return why it cannot be taken."""
         with self.lock:
             if self.busy:
-                return False
+                return "a heal is already running"
+
+            if self.config.public_mode:
+                now = time.time()
+
+                waited = now - self.finished_at
+                if self.finished_at and waited < self.config.heal_cooldown:
+                    return f"cooling down — try again in {self.config.heal_cooldown - waited:.0f}s"
+
+                self.recent = [t for t in self.recent if now - t < 3600]
+                if len(self.recent) >= self.config.heals_per_hour:
+                    return "hourly limit reached on this demo instance — try again later"
+                self.recent.append(now)
+
             self.busy = True
-            return True
+            return None
 
     def release(self) -> None:
         with self.lock:
             self.busy = False
+            self.finished_at = time.time()
 
 
 def create_app(config: Config) -> FastAPI:
@@ -56,7 +79,9 @@ def create_app(config: Config) -> FastAPI:
 
     def heal_now() -> None:
         """Run one heal cycle on a worker thread."""
-        if not state.claim():
+        refusal = state.claim()
+        if refusal:
+            LOG.emit("throttled", reason=refusal)
             return
         try:
             loop = HealLoop(config=state.config)
@@ -184,6 +209,11 @@ def create_app(config: Config) -> FastAPI:
             return JSONResponse({"error": "a heal is already running"}, status_code=409)
         threading.Thread(target=heal_now, daemon=True).start()
         return JSONResponse({"ok": True})
+
+    @app.get("/healthz")
+    async def healthz() -> JSONResponse:
+        """Liveness probe for the host. Deliberately does no work."""
+        return JSONResponse({"ok": True, "version": __version__})
 
     return app
 
