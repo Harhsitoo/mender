@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mender",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "mender", "serve", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}

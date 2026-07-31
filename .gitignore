@@ -1,0 +1,12 @@
+# Generated demo sandbox — rebuilt from demo-repo/ by `mender reset`
+.mender-demo/
+
+# Throwaway worktrees, one per fix attempt
+.mender-work/
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.DS_Store
