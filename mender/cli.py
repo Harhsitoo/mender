@@ -212,34 +212,47 @@ def cmd_scenarios(config: Config, _args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="mender",
-        description="A self-healing repo agent. Codex writes the fix; Mender proves it.",
-    )
-    parser.add_argument(
+    # `--repo` lives on a shared parent so it is accepted on either side of the
+    # subcommand. `mender check --repo x` is what people actually type, and an
+    # argparse default that only accepts `mender --repo x check` reads as a bug.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
         "--repo",
         type=Path,
-        default=None,
-        help="repository to watch (default: the bundled demo-repo)",
+        # SUPPRESS, not None: the flag is defined on both the main parser and
+        # every subparser so it works on either side of the subcommand. With a
+        # None default the subparser would overwrite whatever the main parser
+        # already parsed, silently ignoring `mender --repo x check`.
+        default=argparse.SUPPRESS,
+        help="repository to watch (default: the bundled demo sandbox)",
+    )
+
+    parser = argparse.ArgumentParser(
+        prog="mender",
+        parents=[common],
+        description="A self-healing repo agent. Codex writes the fix; Mender proves it.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("check", help="run the suite and report what is failing")
+    def add(name: str, help: str) -> argparse.ArgumentParser:
+        return sub.add_parser(name, help=help, parents=[common])
 
-    heal = sub.add_parser("heal", help="run the full detect → fix → verify → deliver loop once")
+    add("check", "run the suite and report what is failing")
+
+    heal = add("heal", "run the full detect → fix → verify → deliver loop once")
     heal.add_argument("--keep-branch", action="store_true", default=True, help=argparse.SUPPRESS)
 
-    sub.add_parser("watch", help="poll the repo and heal whenever HEAD moves and the suite is red")
+    add("watch", "poll the repo and heal whenever HEAD moves and the suite is red")
 
-    serve = sub.add_parser("serve", help="run the live dashboard")
+    serve = add("serve", "run the live dashboard")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
 
-    broke = sub.add_parser("break", help="seed a bug into the demo repo")
+    broke = add("break", "seed a bug into the demo repo")
     broke.add_argument("--scenario", default="01", help="scenario key (see `mender scenarios`)")
 
-    sub.add_parser("reset", help="restore the demo repo to its pristine state")
-    sub.add_parser("scenarios", help="list the seeded bugs")
+    add("reset", "restore the demo sandbox to its pristine state")
+    add("scenarios", "list the seeded bugs")
 
     return parser
 
@@ -264,8 +277,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     config = Config.load()
-    if args.repo is not None:
-        config = dataclasses.replace(config, target_repo=args.repo.expanduser().resolve())
+    repo = getattr(args, "repo", None)
+    if repo is not None:
+        config = dataclasses.replace(config, target_repo=repo.expanduser().resolve())
 
     if args.command == "scenarios":
         return cmd_scenarios(config, args)
