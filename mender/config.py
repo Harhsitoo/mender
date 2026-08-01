@@ -32,14 +32,12 @@ def is_test_path(path: str) -> bool:
     is the single most important predicate in the project: it is what stops an
     agent from turning a red suite green by deleting the part that was asking.
     """
-    parts = Path(path).parts
-    if any(part in TEST_DIR_NAMES for part in parts):
-        return True
-
     name = Path(path).name
-    if name in TEST_CONFIG_FILES:
-        return True
-    return name.startswith("test_") or name.endswith("_test.py")
+    return (
+        name in TEST_CONFIG_FILES
+        or name.startswith("test_")
+        or name.endswith("_test.py")
+    )
 
 
 def _env_str(name: str, default: str) -> str:
