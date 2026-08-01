@@ -162,6 +162,28 @@ Codex's patch kept the readable form the refactor was reaching for and restored
 `divmod` for floor semantics — it fixed the bug **without undoing the intent of
 the change**. The pull request is public: [ledger#1](https://github.com/Harhsitoo/ledger/pull/1).
 
+### Mender heals its own codebase
+
+A refactor collapsing `is_test_path` — the predicate the integrity gate is
+built on — into a single expression dropped its directory check, so a file like
+`tests/helpers.py` would no longer be protected. **The refactor silently
+weakened Mender's own anti-cheat guard**, and Mender's own suite caught it.
+Healed on the first attempt, all three gates green:
+[mender#1](https://github.com/Harhsitoo/mender/pull/1).
+
+In all three real repairs — twice in Ledger, once in Mender — Codex fixed the
+defect **without undoing the intent of the change that caused it**. It kept the
+readable form the refactor was reaching for and restored the correct semantics
+underneath. That is a materially higher bar than making the test pass.
+
+### Continuous integration
+
+Both repositories run their suites on every push and pull request. Mender's
+pipeline additionally builds the deployment image, checks the Codex CLI is
+present inside it, boots the container, and waits for `/healthz` — the same
+check the host performs. The deployment image is therefore verified by CI
+rather than merely written carefully.
+
 ### Reproducible sessions
 
 Four seeded bugs in the bundled demo repository, each a different shape — a

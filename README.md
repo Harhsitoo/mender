@@ -1,5 +1,7 @@
 # Mender
 
+[![CI](https://github.com/Harhsitoo/mender/actions/workflows/ci.yml/badge.svg)](https://github.com/Harhsitoo/mender/actions/workflows/ci.yml)
+
 **A self-healing repo agent.** When a test breaks, Mender diagnoses the failure, hands the problem to **Codex** to write the fix, then *independently verifies* that the fix is real — before opening a pull request with a plain-English root cause.
 
 > Codex owns the fix. Mender owns the trust.
