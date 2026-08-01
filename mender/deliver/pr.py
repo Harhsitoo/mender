@@ -13,6 +13,7 @@ an actual pull request additionally needs `gh` and a remote, so it is opt-in.
 from __future__ import annotations
 
 import shutil
+from pathlib import Path
 
 from mender.config import Config
 from mender.events import EventLog
@@ -30,6 +31,7 @@ def deliver(
     verdict: Verdict,
     config: Config,
     log: EventLog,
+    attempt_n: int = 1,
 ) -> tuple[str | None, str | None]:
     """Commit, branch, and optionally open a PR. Returns (branch, pr_url)."""
     root_cause = fix.summary.strip() or "See the verification evidence below."
@@ -50,7 +52,9 @@ def deliver(
 
     pr_url = None
     if config.open_pr:
-        pr_url = _open_pull_request(incident, branch, brief, fix, verdict, config, log)
+        pr_url = _open_pull_request(
+            incident, branch, brief, fix, verdict, config, log, attempt_n
+        )
 
     return branch, pr_url
 
@@ -63,6 +67,7 @@ def _open_pull_request(
     verdict: Verdict,
     config: Config,
     log: EventLog,
+    attempt_n: int,
 ) -> str | None:
     """Push the branch and open a PR with `gh`. Returns the URL, or None."""
     if not shutil.which("gh"):
@@ -88,7 +93,7 @@ def _open_pull_request(
             "--title",
             _pr_title(brief),
             "--body",
-            render_pr_body(incident, brief, fix, verdict),
+            render_pr_body(incident, brief, fix, verdict, attempt_n, config.max_attempts),
         ],
         cwd=config.target_repo,
         timeout=120,
@@ -105,8 +110,16 @@ def _open_pull_request(
     return url
 
 
-def _pr_title(brief: Brief) -> str:
-    return f"Fix {brief.primary.nodeid.split('::')[-1]}"
+def _pr_title(brief: Brief, limit: int = 68) -> str:
+    """A subject line that fits. Descriptive test names make long titles."""
+    name = brief.primary.nodeid.split("::")[-1]
+    title = f"Fix {name}"
+    if len(title) <= limit:
+        return title
+
+    module = Path(brief.primary.file).stem.removeprefix("test_")
+    shorter = f"Fix {name[: limit - 12]}… in {module}"
+    return shorter if len(shorter) <= limit else f"Fix {name[: limit - 5]}…"
 
 
 def _commit_message(brief: Brief, root_cause: str) -> str:
@@ -121,7 +134,12 @@ def _commit_message(brief: Brief, root_cause: str) -> str:
 
 
 def render_pr_body(
-    incident: Incident, brief: Brief, fix: FixResult, verdict: Verdict
+    incident: Incident,
+    brief: Brief,
+    fix: FixResult,
+    verdict: Verdict,
+    attempt_n: int = 1,
+    max_attempts: int = 1,
 ) -> str:
     """The review-facing writeup: what broke, why, and the proof it is fixed."""
     gate_rows = "\n".join(
@@ -166,7 +184,7 @@ evidence.
 |------|--------|--------|
 {gate_rows}
 
-Healed on attempt {len(incident.attempts)} of {incident.attempts and len(incident.attempts) or 1}, {incident.elapsed:.0f}s after detection.
+Healed on attempt {attempt_n} of {max_attempts}, {incident.elapsed:.0f}s after detection.
 {attempts_note}
 ---
 

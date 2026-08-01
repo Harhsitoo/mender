@@ -178,6 +178,9 @@ class HealLoop:
                     verdict=verdict,
                     config=self.config,
                     log=self.log,
+                    # This attempt is not in incident.attempts yet — it is
+                    # appended by the caller once the worktree is torn down.
+                    attempt_n=n,
                 )
 
         return Attempt(n=n, fix=fix, verdict=verdict)

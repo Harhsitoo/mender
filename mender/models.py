@@ -34,6 +34,10 @@ def _now() -> datetime:
 class TestFailure:
     """A single failing test, parsed out of pytest's JUnit XML report."""
 
+    # pytest collects any class named Test*, so importing this into a test
+    # module produces a collection warning. It is a value object, not a suite.
+    __test__ = False
+
     nodeid: str
     file: str
     line: int
@@ -50,6 +54,8 @@ class TestFailure:
 @dataclass(frozen=True)
 class TestReport:
     """The outcome of one pytest run."""
+
+    __test__ = False
 
     total: int
     failures: tuple[TestFailure, ...]
