@@ -55,7 +55,10 @@ class AppState:
             if self.busy:
                 return "a heal is already running"
 
-            if self.config.public_mode:
+            # Rate limits exist to cap token spend. Replaying a recorded
+            # session costs nothing, so throttling it would be friction with
+            # no purpose — a reviewer should be able to click freely.
+            if self.config.public_mode and self.live:
                 now = time.time()
 
                 waited = now - self.finished_at

@@ -51,6 +51,14 @@ jobs:
       - name: Codex CLI is installed in the image
         run: docker run --rm --entrypoint codex mender:ci --version
 
+      # A deployment without these has no fallback when Codex is
+      # unauthenticated, which turns a missing key into a dead page.
+      - name: Recorded sessions are present
+        run: |
+          count=$(docker run --rm --entrypoint sh mender:ci -c 'ls replays/*.json | wc -l')
+          echo "transcripts in image: $count"
+          test "$count" -ge 4
+
       - name: Mender starts and answers its health check
         run: |
           docker run -d --name mender -p 8000:8000 mender:ci

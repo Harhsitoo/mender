@@ -29,6 +29,10 @@ COPY mender/ ./mender/
 COPY dashboard/ ./dashboard/
 COPY demo-repo/ ./demo-repo/
 COPY tests/ ./tests/
+# Recorded sessions. Without these an instance that cannot reach Codex has
+# nothing to fall back on, so a missing key would mean a dead demo rather than
+# a replayed one.
+COPY replays/ ./replays/
 RUN pip install --no-cache-dir --no-deps -e .
 
 # Codex writes auth and session state under HOME; the demo sandbox and the
